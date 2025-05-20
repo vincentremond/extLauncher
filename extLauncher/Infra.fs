@@ -27,7 +27,8 @@ module IO =
                 EnumerationOptions(
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = true,
-                    MatchType = MatchType.Simple
+                    MatchType = MatchType.Simple,
+                    AttributesToSkip = FileAttributes.Hidden
                 )
             )
         | RegexPattern pattern ->
@@ -39,7 +40,8 @@ module IO =
                 EnumerationOptions(
                     RecurseSubdirectories = true,
                     IgnoreInaccessible = true,
-                    MatchType = MatchType.Simple
+                    MatchType = MatchType.Simple,
+                    AttributesToSkip = FileAttributes.Hidden
                 )
             )
             |> Seq.filter (Path.GetFileName >> regex.IsMatch)

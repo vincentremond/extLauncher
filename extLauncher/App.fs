@@ -21,7 +21,7 @@ let loadFolder loadFiles conf : Folder option =
             }
             |> Some
 
-let index loadFiles save conf : Folder option =
+let index loadFiles save (conf: FolderConf) : Folder option =
     loadFolder loadFiles conf |> Option.map save
 
 let refresh loadFiles save (folder: Folder) : Folder option =
@@ -34,10 +34,7 @@ let refresh loadFiles save (folder: Folder) : Folder option =
     newFiles
     |> Array.map (fun newFile ->
         match currentFiles.TryFind newFile.Path with
-        | Some current -> {
-            newFile with
-                Triggered = current.Triggered
-          }
+        | Some current -> { newFile with Triggered = current.Triggered }
         | None -> newFile
     )
     |> fun files -> { folder with Files = files }

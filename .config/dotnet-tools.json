@@ -2,17 +2,19 @@
   "version": 1,
   "isRoot": true,
   "tools": {
-    "extLauncher": {
-      "version": "1.0.0",
-      "commands": [
-        "extLauncher"
-      ]
-    },
     "fantomas": {
-      "version": "6.1.1",
+      "version": "7.0.2",
       "commands": [
         "fantomas"
-      ]
+      ],
+      "rollForward": false
+    },
+    "paket": {
+      "version": "9.0.2",
+      "commands": [
+        "paket"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -3,11 +3,12 @@
 type FolderConf = {
     Path: FolderPath
     Pattern: Pattern
+    FoldersToIgnore: FolderPath array
     Launchers: Launcher array
 }
 
-let loadFolder loadFiles conf : Folder option =
-    loadFiles conf.Path conf.Pattern
+let loadFolder (loadFiles: LoadFiles) conf : Folder option =
+    loadFiles conf.Path conf.FoldersToIgnore conf.Pattern
     |> Array.map ((<||) File.create)
     |> Array.sort
     |> function
@@ -16,18 +17,19 @@ let loadFolder loadFiles conf : Folder option =
             {
                 Path = conf.Path
                 Pattern = conf.Pattern
+                FoldersToIgnore = conf.FoldersToIgnore
                 Files = files
                 Launchers = conf.Launchers
             }
             |> Some
 
-let index loadFiles save (conf: FolderConf) : Folder option =
+let index (loadFiles: LoadFiles) save (conf: FolderConf) : Folder option =
     loadFolder loadFiles conf |> Option.map save
 
-let refresh loadFiles save (folder: Folder) : Folder option =
+let refresh (loadFiles: LoadFiles) save (folder: Folder) : Folder option =
 
     let newFiles =
-        folder.Pattern |> loadFiles folder.Path |> Array.map ((<||) File.create)
+         loadFiles folder.Path folder.FoldersToIgnore folder.Pattern |> Array.map ((<||) File.create)
 
     let currentFiles = folder.Files |> Array.map (fun f -> f.Path, f) |> Map
 

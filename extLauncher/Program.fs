@@ -126,6 +126,10 @@ type IndexSettings() =
     [<Description "If set then the pattern is a regular expression, otherwise it's a combination of valid literal path and wildcard (* and ?) characters.">]
     member val IsRegex = false with get, set
 
+    [<CommandOption "-i|--ignore-folder">]
+    [<Description "Folders to ignore during indexing.">]
+    member val FoldersToIgnore : string array = [||] with get, set
+
 type IndexCommand() =
     inherit Command<IndexSettings>()
 
@@ -134,6 +138,7 @@ type IndexCommand() =
             App.index IO.getFiles Db.upsertFolder {
                 Path = currentPath
                 Pattern = Pattern.init settings.Pattern settings.IsRegex
+                FoldersToIgnore = settings.FoldersToIgnore |> Array.map FolderPath.mk
                 Launchers = Array.empty
             }
         )
@@ -191,7 +196,7 @@ type SetLauncherCommand() =
             |> fun launcher ->
                 match folder.Launchers |> Array.tryFindIndex (fun l -> l.Name = launcher.Name) with
                 | Some index ->
-                    folder.Launchers.[index] <- launcher
+                    folder.Launchers[index] <- launcher
                     folder
                 | None -> { folder with Launchers = Array.insertAt 0 launcher folder.Launchers }
                 |> Db.upsertFolder

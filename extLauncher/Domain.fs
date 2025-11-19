@@ -1,6 +1,7 @@
 ﻿namespace extLauncher
 
 open System
+open System.IO
 
 type FileName =
     | FileName of string
@@ -10,7 +11,15 @@ type FileName =
         | FileName v -> v
 
 type FolderPath =
+    private
     | FolderPath of string
+
+    static member mk(path: string) =
+        FolderPath
+        <| if Path.IsPathRooted(path) then
+               path
+           else
+               Path.GetFullPath(path)
 
     member this.value =
         match this with
@@ -130,9 +139,14 @@ module Pattern =
 type Folder = {
     Path: FolderPath
     Pattern: Pattern
+    FoldersToIgnore: FolderPath array
     Files: File array
     Launchers: Launcher array
 }
+
+type LoadFilesResult = FilePath * FileName
+type LoadFilesResults = LoadFilesResult array
+type LoadFiles = FolderPath -> FolderPath array -> Pattern -> LoadFilesResults
 
 module Helpers =
 

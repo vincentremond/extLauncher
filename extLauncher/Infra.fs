@@ -18,36 +18,37 @@ module IO =
 
     let userPathCombine path = Path.Combine(userPath, path)
 
-    let private enumerateFiles (FolderPath path) =
+    let private filterIgnoredFolders (foldersToIgnore: FolderPath array) (files: string seq) =
+        files
+        |> Seq.filter (fun filePath ->
+            not
+            <| (foldersToIgnore
+                |> Array.exists (fun folderToIgnore ->  filePath.StartsWith(folderToIgnore.value, StringComparison.CurrentCultureIgnoreCase)))
+        )
+
+    let private enumerateFiles (path: FolderPath) (foldersToIgnore: FolderPath array) =
         function
         | WildcardPattern pattern ->
             Directory.EnumerateFiles(
-                path,
+                path.value,
                 pattern,
-                EnumerationOptions(
-                    RecurseSubdirectories = true,
-                    IgnoreInaccessible = true,
-                    MatchType = MatchType.Simple,
-                    AttributesToSkip = FileAttributes.Hidden
-                )
+                EnumerationOptions(RecurseSubdirectories = true, IgnoreInaccessible = true, MatchType = MatchType.Simple, AttributesToSkip = FileAttributes.Hidden)
             )
+            |> (filterIgnoredFolders foldersToIgnore)
+
         | RegexPattern pattern ->
             let regex = Regex pattern
 
             Directory.EnumerateFiles(
-                path,
+                path.value,
                 "*",
-                EnumerationOptions(
-                    RecurseSubdirectories = true,
-                    IgnoreInaccessible = true,
-                    MatchType = MatchType.Simple,
-                    AttributesToSkip = FileAttributes.Hidden
-                )
+                EnumerationOptions(RecurseSubdirectories = true, IgnoreInaccessible = true, MatchType = MatchType.Simple, AttributesToSkip = FileAttributes.Hidden)
             )
             |> Seq.filter (Path.GetFileName >> regex.IsMatch)
+            |> (filterIgnoredFolders foldersToIgnore)
 
-    let getFiles folderPath pattern =
-        enumerateFiles folderPath pattern
+    let getFiles folderPath foldersToIgnore pattern  =
+        enumerateFiles folderPath foldersToIgnore pattern
         |> Seq.map (fun path -> FilePath path, path |> Path.GetFileNameWithoutExtension |> FileName)
         |> Seq.toArray
 
@@ -98,6 +99,7 @@ module Db =
         Id: string
         Pattern: string
         IsRegex: bool
+        FoldersToIgnore: string array
         Launchers: LauncherDb array
         Files: FileDb array
     } with
@@ -106,6 +108,7 @@ module Db =
             Id = folder.Path.value
             Pattern = folder.Pattern.value
             IsRegex = folder.Pattern.isRegex
+            FoldersToIgnore = folder.FoldersToIgnore |> Array.map _.value
             Launchers = folder.Launchers |> Array.map LauncherDb.fromDomain
             Files = folder.Files |> Array.map FileDb.fromDomain
         }
@@ -113,6 +116,7 @@ module Db =
         static member toDomain(folderDb: FolderDb) = {
             Path = FolderPath folderDb.Id
             Pattern = Pattern.init folderDb.Pattern folderDb.IsRegex
+            FoldersToIgnore = folderDb.FoldersToIgnore |> Array.map FolderPath
             Launchers = folderDb.Launchers |> Array.map LauncherDb.toDomain
             Files = folderDb.Files |> Array.map FileDb.toDomain
         }

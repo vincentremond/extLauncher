@@ -10,14 +10,14 @@ module private Implementations =
     open System.Diagnostics
     type Path = System.IO.Path
 
-    let markup value = AnsiConsole.MarkupLine value
+    let markup value = AnsiConsole.MarkupLineInterpolated value
 
     let notInitialized () =
-        markup $"Folder not yet indexed: [yellow]%s{IO.AppName}[/] index [gray]--help[/]"
+        markup $"Folder not yet indexed: [yellow]{IO.AppName}[/] index [gray]--help[/]"
         1
 
     let run (file: File) launcher =
-        markup $"""Launching [green]%s{file.Name.value}[/] [gray]%s{file.Path.value}[/]..."""
+        markup $"""Launching [green]{file.Name.value}[/] [gray]{file.Path.value}[/]..."""
         let file = file |> File.triggered |> Db.updateFile
 
         match launcher with
@@ -145,12 +145,12 @@ type IndexCommand() =
         |> withLoader
         |> function
             | Some folder ->
-                printfn $"""%s{toCount "file" folder.Files.Length} indexed."""
-                markup $"Start to search and launch: [yellow]%s{IO.AppName}[/]"
-                markup $"Add a specific launcher: [yellow]%s{IO.AppName}[/] launcher [gray]--help[/]"
+                markup $"""{toCount "file" folder.Files.Length} indexed."""
+                markup $"Start to search and launch: [yellow]{IO.AppName}[/]"
+                markup $"Add a specific launcher: [yellow]{IO.AppName}[/] launcher [gray]--help[/]"
                 0
             | None ->
-                printfn $"%s{Console.NoMatch}"
+                markup $"{Console.NoMatch}"
                 -1
 
 type LauncherSettings() =
@@ -185,7 +185,7 @@ type SetLauncherCommand() =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->
-            markup $"[teal]%s{settings.Name}[/] launcher updated."
+            markup $"[teal]{settings.Name}[/] launcher updated."
 
             {
                 Name = settings.Name
@@ -215,7 +215,7 @@ type RemoveLauncherCommand() =
         | Some folder ->
             match folder.Launchers |> Array.tryFindIndex (fun l -> l.Name = settings.Name) with
             | Some index ->
-                markup $"[green]%s{settings.Name}[/] launcher removed."
+                markup $"[green]{settings.Name}[/] launcher removed."
 
                 { folder with Launchers = Array.removeAt index folder.Launchers }
                 |> Db.upsertFolder
@@ -223,7 +223,7 @@ type RemoveLauncherCommand() =
 
                 0
             | None ->
-                markup $"[green]%s{settings.Name}[/] launcher not found."
+                markup $"[green]{settings.Name}[/] launcher not found."
                 printLaunchers folder
                 0
 
@@ -237,7 +237,7 @@ type DeindexCommand() =
         | None -> notInitialized ()
         | Some folder ->
             Db.deleteFolder folder.Path
-            printfn "Deindexed"
+            markup $"Deindexed"
             0
 
 type InfoCommand() =
@@ -247,18 +247,30 @@ type InfoCommand() =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->
-            markup $"[teal]Path:[/]\n  %s{folder.Path.value.EscapeMarkup()}"
+            markup $"[teal]Path:[/]"
+            markup $"  {folder.Path.value}"
+            markup $""
+            markup $"[teal]Pattern:[/]"
+            markup $"  {folder.Pattern.value}"
+            markup $""
+            markup $"[teal]Folders to ignore:[/]"
 
-            markup $"\n[teal]Pattern:[/]\n  %s{folder.Pattern.value.EscapeMarkup()}"
+            if Array.isEmpty folder.FoldersToIgnore then
+                markup $"  -"
+            else
+                for folderToIgnore in folder.FoldersToIgnore do
+                    markup $"  {folderToIgnore.value}"
 
-            markup "\n[teal]Launchers:[/]"
+            markup $""
+            markup $"[teal]Launchers:[/]"
 
             if Array.isEmpty folder.Launchers then
-                printfn "  -\n"
+                markup $"  -"
+                markup $""
             else
                 printLaunchers folder
 
-            markup "[teal]Indexed files:[/]"
+            markup $"[teal]Indexed files:[/]"
 
             let files =
                 Table()
@@ -353,7 +365,7 @@ module Program =
                     "index"
                     "*.sln"
                 |]
-            )
+            ) |> ignore
 
             conf.AddExample(
                 [|
@@ -361,7 +373,7 @@ module Program =
                     "\"(.*)[.](fs|cs)proj$\""
                     "--regex"
                 |]
-            )
+            ) |> ignore
 
             conf.AddExample(
                 [|
@@ -370,7 +382,7 @@ module Program =
                     "set"
                     "execpath"
                 |]
-            )
+            ) |> ignore
 
             conf.AddExample(
                 [|
@@ -378,7 +390,7 @@ module Program =
                     "mylauncher"
                     "remove"
                 |]
-            )
+            ) |> ignore
 
             conf.AddExample(
                 [|
@@ -390,7 +402,7 @@ module Program =
                     "file"
                     "--args=\"-r %s\""
                 |]
-            )
+            ) |> ignore
 
             conf.AddExample(
                 [|
@@ -401,7 +413,7 @@ module Program =
                     "--choose"
                     "directory"
                 |]
-            )
+            ) |> ignore
 
             conf.AddExample(
                 [|
@@ -412,7 +424,7 @@ module Program =
                     "--choose"
                     "directory"
                 |]
-            )
+            ) |> ignore
 
 #if DEBUG
             conf.ValidateExamples() |> ignore

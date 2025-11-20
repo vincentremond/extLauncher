@@ -73,20 +73,25 @@ module File =
     let triggered file = { file with Triggered = file.Triggered + 1 }
 
 type Choose =
-    | File = 0
-    | Directory = 1
+    | File
+    | Directory
 
 module Choose =
-    let init =
+    let fromIntCode =
         function
         | 0 -> Choose.File
         | 1 -> Choose.Directory
         | _ -> failwith "Invalid value"
 
+    let toIntCode =
+        function
+        | Choose.File -> 0
+        | Choose.Directory -> 1
+
 type Launcher = {
     Name: string
     Path: FilePath
-    Arguments: string
+    Arguments: string option
     Choose: Choose
 } with
 
@@ -94,10 +99,9 @@ type Launcher = {
 
 module Launcher =
     let buildArgs launcher tolaunch =
-        if String.IsNullOrEmpty launcher.Arguments then
-            tolaunch
-        else
-            launcher.Arguments.Replace("%s", $"\"%s{tolaunch}\"")
+        match launcher.Arguments with
+        | None -> ""
+        | Some args -> args.Replace("%s", $"\"%s{tolaunch}\"")
 
 type Pattern =
     | WildcardPattern of string

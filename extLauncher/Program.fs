@@ -10,7 +10,8 @@ module private Implementations =
     open System.Diagnostics
     type Path = System.IO.Path
 
-    let markup value = AnsiConsole.MarkupLineInterpolated value
+    let markup value =
+        AnsiConsole.MarkupLineInterpolated value
 
     let notInitialized () =
         markup $"Folder not yet indexed: [yellow]{IO.AppName}[/] index [gray]--help[/]"
@@ -22,18 +23,23 @@ module private Implementations =
 
         match launcher with
         | None ->
+            let containingFolder = file.Path.folder
+
             let psi = ProcessStartInfo file.Path.value
             psi.UseShellExecute <- true
+            psi.WorkingDirectory <- containingFolder.value
             Process.Start psi |> ignore
         | Some launcher ->
-            let path =
+            let path, workingDirectory =
                 match launcher.Choose with
-                | Choose.File -> file.Path.value
-                | Choose.Directory -> Path.GetDirectoryName file.Path.value
-                | _ -> NotImplementedException() |> raise
+                | Choose.File -> file.Path.value, file.Path.folder.value
+                | Choose.Directory ->
+                    let dir = file.Path.folder.value
+                    dir, dir
 
             let psi = ProcessStartInfo launcher.Path.value
             psi.Arguments <- Launcher.buildArgs launcher path
+            psi.WorkingDirectory <- workingDirectory
             Process.Start psi |> ignore
 
     let chooseLauncher folder file =
@@ -41,7 +47,7 @@ module private Implementations =
         | [||] -> run file None
         | [| launcher |] -> run file (Some launcher)
         | launchers ->
-            Helpers.searchByName launchers (fun l -> l.Name)
+            Helpers.searchByName launchers _.Name
             |> Console.prompt Console.Terminal "With which launcher?" Launcher.name 10
             |> function
                 | Some launcher -> run file (Some launcher)
@@ -78,7 +84,10 @@ module private Implementations =
     let toCount str num =
         if num > 1 then $"%i{num} %s{str}s" else $"%i{num} %s{str}"
 
-    let noNull s = if isNull s then "" else s
+    let renderArgs args =
+        match args with
+        | None -> "-"
+        | Some s -> s |> Markup.Escape |> _.Replace("%s", "[white bold]%s[/]")
 
     let printLaunchers (folder: Folder) =
         let launchers =
@@ -97,10 +106,10 @@ module private Implementations =
         for l in folder.Launchers do
             launchers.AddRow(
                 [|
-                    l.Name
+                    l.Name.EscapeMarkup()
                     string l.Choose
-                    l.Path.value
-                    noNull l.Arguments
+                    l.Path.value.EscapeMarkup()
+                    renderArgs l.Arguments
                 |]
             )
             |> ignore
@@ -128,7 +137,7 @@ type IndexSettings() =
 
     [<CommandOption "-i|--ignore-folder">]
     [<Description "Folders to ignore during indexing.">]
-    member val FoldersToIgnore : string array = [||] with get, set
+    member val FoldersToIgnore: string array = [||] with get, set
 
 type IndexCommand() =
     inherit Command<IndexSettings>()
@@ -168,8 +177,9 @@ type SetLauncherSettings() =
     member val Path = "" with get, set
 
     [<CommandOption "-a|--args">]
-    [<Description "Launcher command line arguments.">]
-    member val Arguments = "" with get, set
+    [<Description "Launcher command line arguments. Default is '%s' where the launched file or directory path will be inserted.">]
+    [<DefaultValue("%s")>]
+    member val Arguments = "%s" with get, set
 
     [<CommandOption "-c|--choose">]
     [<Description "Which should be launched, the 'file' [italic](default)[/] or the 'directory'?">]
@@ -190,7 +200,10 @@ type SetLauncherCommand() =
             {
                 Name = settings.Name
                 Path = FilePath settings.Path
-                Arguments = settings.Arguments
+                Arguments =
+                    match settings.Arguments with
+                    | x when String.IsNullOrWhiteSpace(x) -> None
+                    | args -> Some args
                 Choose = settings.Choose
             }
             |> fun launcher ->
@@ -322,18 +335,12 @@ module Program =
         app.Configure(fun conf ->
             conf.SetApplicationName(IO.AppName) |> ignore
 
-            conf
-                .AddCommand<PromptCommand>("prompt")
-                .WithDescription(
-                    "[italic](default command)[/] Type to search. Arrows Up/Down to navigate. Enter to launch. Escape to quit."
-                )
+            conf.AddCommand<PromptCommand>("prompt").WithDescription("[italic](default command)[/] Type to search. Arrows Up/Down to navigate. Enter to launch. Escape to quit.")
             |> ignore
 
             conf
                 .AddCommand<IndexCommand>("index")
-                .WithDescription(
-                    "Indexes all files recursively with a specific pattern which can be a wildcard [italic](default)[/] or a regular expression."
-                )
+                .WithDescription("Indexes all files recursively with a specific pattern which can be a wildcard [italic](default)[/] or a regular expression.")
             |> ignore
 
             conf.AddBranch<LauncherSettings>(
@@ -352,9 +359,7 @@ module Program =
             conf.AddCommand<DeindexCommand>("deindex").WithDescription("Clears the current index.")
             |> ignore
 
-            conf
-                .AddCommand<InfoCommand>("info")
-                .WithDescription("Prints the current pattern and all the indexed files.")
+            conf.AddCommand<InfoCommand>("info").WithDescription("Prints the current pattern and all the indexed files.")
             |> ignore
 
             conf.AddCommand<RefreshCommand>("refresh").WithDescription("Updates the current index.")
@@ -365,7 +370,8 @@ module Program =
                     "index"
                     "*.sln"
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
             conf.AddExample(
                 [|
@@ -373,7 +379,8 @@ module Program =
                     "\"(.*)[.](fs|cs)proj$\""
                     "--regex"
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
             conf.AddExample(
                 [|
@@ -382,7 +389,8 @@ module Program =
                     "set"
                     "execpath"
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
             conf.AddExample(
                 [|
@@ -390,7 +398,8 @@ module Program =
                     "mylauncher"
                     "remove"
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
             conf.AddExample(
                 [|
@@ -402,7 +411,8 @@ module Program =
                     "file"
                     "--args=\"-r %s\""
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
             conf.AddExample(
                 [|
@@ -413,7 +423,8 @@ module Program =
                     "--choose"
                     "directory"
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
             conf.AddExample(
                 [|
@@ -424,7 +435,8 @@ module Program =
                     "--choose"
                     "directory"
                 |]
-            ) |> ignore
+            )
+            |> ignore
 
 #if DEBUG
             conf.ValidateExamples() |> ignore

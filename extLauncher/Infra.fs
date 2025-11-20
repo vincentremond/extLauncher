@@ -23,7 +23,7 @@ module IO =
         |> Seq.filter (fun filePath ->
             not
             <| (foldersToIgnore
-                |> Array.exists (fun folderToIgnore ->  filePath.StartsWith(folderToIgnore.value, StringComparison.CurrentCultureIgnoreCase)))
+                |> Array.exists (fun folderToIgnore -> filePath.StartsWith(folderToIgnore.value, StringComparison.CurrentCultureIgnoreCase)))
         )
 
     let private enumerateFiles (path: FolderPath) (foldersToIgnore: FolderPath array) =
@@ -47,7 +47,7 @@ module IO =
             |> Seq.filter (Path.GetFileName >> regex.IsMatch)
             |> (filterIgnoredFolders foldersToIgnore)
 
-    let getFiles folderPath foldersToIgnore pattern  =
+    let getFiles folderPath foldersToIgnore pattern =
         enumerateFiles folderPath foldersToIgnore pattern
         |> Seq.map (fun path -> FilePath path, path |> Path.GetFileNameWithoutExtension |> FileName)
         |> Seq.toArray
@@ -57,22 +57,22 @@ module Db =
     type LauncherDb = {
         Name: string
         Path: string
-        Arguments: string
+        Arguments: string | null
         Choose: int
     } with
 
         static member fromDomain(launcher: Launcher) = {
             Name = launcher.Name
             Path = launcher.Path.value
-            Arguments = launcher.Arguments
-            Choose = int launcher.Choose
+            Arguments = launcher.Arguments |> Option.toObj
+            Choose = Choose.toIntCode launcher.Choose
         }
 
         static member toDomain(launcherDb: LauncherDb) : Launcher = {
             Name = launcherDb.Name
             Path = FilePath launcherDb.Path
-            Arguments = launcherDb.Arguments
-            Choose = Choose.init launcherDb.Choose
+            Arguments = launcherDb.Arguments |> Option.ofObj
+            Choose = Choose.fromIntCode launcherDb.Choose
         }
 
     type FileDb = {

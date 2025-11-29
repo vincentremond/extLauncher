@@ -29,7 +29,8 @@ let index (loadFiles: LoadFiles) save (conf: FolderConf) : Folder option =
 let refresh (loadFiles: LoadFiles) save (folder: Folder) : Folder option =
 
     let newFiles =
-         loadFiles folder.Path folder.FoldersToIgnore folder.Pattern |> Array.map ((<||) File.create)
+        loadFiles folder.Path folder.FoldersToIgnore folder.Pattern
+        |> Array.map ((<||) File.create)
 
     let currentFiles = folder.Files |> Array.map (fun f -> f.Path, f) |> Map
 

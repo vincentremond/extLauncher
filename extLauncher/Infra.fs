@@ -23,7 +23,9 @@ module IO =
         |> Seq.filter (fun filePath ->
             not
             <| (foldersToIgnore
-                |> Array.exists (fun folderToIgnore -> filePath.StartsWith(folderToIgnore.value, StringComparison.CurrentCultureIgnoreCase)))
+                |> Array.exists (fun folderToIgnore ->
+                    filePath.StartsWith(folderToIgnore.value, StringComparison.CurrentCultureIgnoreCase)
+                ))
         )
 
     let private enumerateFiles (path: FolderPath) (foldersToIgnore: FolderPath array) =
@@ -32,7 +34,12 @@ module IO =
             Directory.EnumerateFiles(
                 path.value,
                 pattern,
-                EnumerationOptions(RecurseSubdirectories = true, IgnoreInaccessible = true, MatchType = MatchType.Simple, AttributesToSkip = FileAttributes.Hidden)
+                EnumerationOptions(
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = true,
+                    MatchType = MatchType.Simple,
+                    AttributesToSkip = FileAttributes.Hidden
+                )
             )
             |> (filterIgnoredFolders foldersToIgnore)
 
@@ -42,7 +49,12 @@ module IO =
             Directory.EnumerateFiles(
                 path.value,
                 "*",
-                EnumerationOptions(RecurseSubdirectories = true, IgnoreInaccessible = true, MatchType = MatchType.Simple, AttributesToSkip = FileAttributes.Hidden)
+                EnumerationOptions(
+                    RecurseSubdirectories = true,
+                    IgnoreInaccessible = true,
+                    MatchType = MatchType.Simple,
+                    AttributesToSkip = FileAttributes.Hidden
+                )
             )
             |> Seq.filter (Path.GetFileName >> regex.IsMatch)
             |> (filterIgnoredFolders foldersToIgnore)

@@ -116,9 +116,15 @@ let ``should filter out files in ignored folders when loading`` () =
 
             allFiles
             |> Array.filter (fun (filePath: FilePath, _) ->
-                not (foldersToIgnore
+                not (
+                    foldersToIgnore
                     |> Array.exists (fun (folderToIgnore: FolderPath) ->
-                        filePath.value.StartsWith(folderToIgnore.value, System.StringComparison.CurrentCultureIgnoreCase)))
+                        filePath.value.StartsWith(
+                            folderToIgnore.value,
+                            System.StringComparison.CurrentCultureIgnoreCase
+                        )
+                    )
+                )
             )
 
         App.loadFolder loadFiles {
@@ -190,15 +196,24 @@ let ``should filter out files in multiple ignored folders`` () =
 
             allFiles
             |> Array.filter (fun (filePath: FilePath, _) ->
-                not (foldersToIgnore
+                not (
+                    foldersToIgnore
                     |> Array.exists (fun (folderToIgnore: FolderPath) ->
-                        filePath.value.StartsWith(folderToIgnore.value, System.StringComparison.CurrentCultureIgnoreCase)))
+                        filePath.value.StartsWith(
+                            folderToIgnore.value,
+                            System.StringComparison.CurrentCultureIgnoreCase
+                        )
+                    )
+                )
             )
 
         App.loadFolder loadFiles {
             Path = folderPath
             Pattern = Pattern.init pattern false
-            FoldersToIgnore = [| ignoredFolder1; ignoredFolder2 |]
+            FoldersToIgnore = [|
+                ignoredFolder1
+                ignoredFolder2
+            |]
             Launchers = Array.empty
         }
 
@@ -206,7 +221,10 @@ let ``should filter out files in multiple ignored folders`` () =
     =! Some {
         Path = folderPath
         Pattern = Pattern.init pattern false
-        FoldersToIgnore = [| ignoredFolder1; ignoredFolder2 |]
+        FoldersToIgnore = [|
+            ignoredFolder1
+            ignoredFolder2
+        |]
         Files = [|
             File.create (FilePath "/test/file1.ext") (FileName "file1")
             File.create (FilePath "/test/other/file4.ext") (FileName "file4")
@@ -230,9 +248,15 @@ let ``should filter out files in subdirectories of ignored folders`` () =
 
             allFiles
             |> Array.filter (fun (filePath: FilePath, _) ->
-                not (foldersToIgnore
+                not (
+                    foldersToIgnore
                     |> Array.exists (fun (folderToIgnore: FolderPath) ->
-                        filePath.value.StartsWith(folderToIgnore.value, System.StringComparison.CurrentCultureIgnoreCase)))
+                        filePath.value.StartsWith(
+                            folderToIgnore.value,
+                            System.StringComparison.CurrentCultureIgnoreCase
+                        )
+                    )
+                )
             )
 
         App.loadFolder loadFiles {
@@ -247,15 +271,14 @@ let ``should filter out files in subdirectories of ignored folders`` () =
         Path = folderPath
         Pattern = Pattern.init pattern false
         FoldersToIgnore = [| ignoredFolder |]
-        Files = [|
-            File.create (FilePath "/test/file1.ext") (FileName "file1")
-        |]
+        Files = [| File.create (FilePath "/test/file1.ext") (FileName "file1") |]
         Launchers = Array.empty
     }
 
 [<Fact>]
 let ``refresh should filter out files in ignored folders`` () =
     let ignoredFolder = FolderPath.mk "/test/ignored"
+
     let newFolder =
         let loadFiles _ foldersToIgnore _ =
             let allFiles = [|
@@ -266,9 +289,15 @@ let ``refresh should filter out files in ignored folders`` () =
 
             allFiles
             |> Array.filter (fun (filePath: FilePath, _) ->
-                not (foldersToIgnore
+                not (
+                    foldersToIgnore
                     |> Array.exists (fun (folderToIgnore: FolderPath) ->
-                        filePath.value.StartsWith(folderToIgnore.value, System.StringComparison.CurrentCultureIgnoreCase)))
+                        filePath.value.StartsWith(
+                            folderToIgnore.value,
+                            System.StringComparison.CurrentCultureIgnoreCase
+                        )
+                    )
+                )
             )
 
         let save = id
@@ -277,9 +306,7 @@ let ``refresh should filter out files in ignored folders`` () =
             Path = FolderPath.mk "/test"
             Pattern = Pattern.init "" false
             FoldersToIgnore = [| ignoredFolder |]
-            Files = [|
-                File.create (FilePath "file1") (FileName "")
-            |]
+            Files = [| File.create (FilePath "file1") (FileName "") |]
             Launchers = Array.empty
         }
         |> App.refresh loadFiles save

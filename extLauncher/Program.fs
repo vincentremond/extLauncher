@@ -119,7 +119,7 @@ module private Implementations =
 type PromptCommand() =
     inherit Command()
 
-    override _.Execute c =
+    override _.Execute(_context, _cancellationToken) =
         findFolder ()
         |> Option.map (prompt >> fun () -> 0)
         |> Option.defaultWith notInitialized
@@ -142,7 +142,7 @@ type IndexSettings() =
 type IndexCommand() =
     inherit Command<IndexSettings>()
 
-    override _.Execute(_, settings) =
+    override _.Execute(_context, settings, _cancellationToken) =
         (fun _ ->
             App.index IO.getFiles Db.upsertFolder {
                 Path = currentPath
@@ -191,7 +191,7 @@ type RemoveLauncherSettings() =
 type SetLauncherCommand() =
     inherit Command<SetLauncherSettings>()
 
-    override _.Execute(_, settings) =
+    override _.Execute(_, settings, _cancellationToken) =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->
@@ -222,7 +222,7 @@ type SetLauncherCommand() =
 type RemoveLauncherCommand() =
     inherit Command<RemoveLauncherSettings>()
 
-    override _.Execute(_, settings) =
+    override _.Execute(_, settings, _cancellationToken) =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->
@@ -245,7 +245,7 @@ type RemoveLauncherCommand() =
 type DeindexCommand() =
     inherit Command()
 
-    override _.Execute _ =
+    override _.Execute(_context, _cancellationToken) =
         match Db.findFolder currentPath with
         | None -> notInitialized ()
         | Some folder ->
@@ -256,7 +256,7 @@ type DeindexCommand() =
 type InfoCommand() =
     inherit Command()
 
-    override _.Execute _ =
+    override _.Execute(_context, _cancellationToken) =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->
@@ -316,7 +316,7 @@ type InfoCommand() =
 type RefreshCommand() =
     inherit Command()
 
-    override _.Execute _ =
+    override _.Execute(_context, _cancellationToken) =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->

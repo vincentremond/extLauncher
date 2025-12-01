@@ -21,26 +21,32 @@ module private Implementations =
         markup $"""Launching [green]{file.Name.value}[/] [gray]{file.Path.value}[/]..."""
         let file = file |> File.triggered |> Db.updateFile
 
-        match launcher with
-        | None ->
-            let containingFolder = file.Path.folder
+        let timeout = TimeSpan.FromSeconds(2.0)
 
-            let psi = ProcessStartInfo file.Path.value
-            psi.UseShellExecute <- true
-            psi.WorkingDirectory <- containingFolder.value
-            Process.Start psi |> ignore
-        | Some launcher ->
-            let path, workingDirectory =
-                match launcher.Choose with
-                | Choose.File -> file.Path.value, file.Path.folder.value
-                | Choose.Directory ->
-                    let dir = file.Path.folder.value
-                    dir, dir
+        let psi =
+            match launcher with
+            | None ->
+                let containingFolder = file.Path.folder
 
-            let psi = ProcessStartInfo launcher.Path.value
-            psi.Arguments <- Launcher.buildArgs launcher path
-            psi.WorkingDirectory <- workingDirectory
-            Process.Start psi |> ignore
+                let psi = ProcessStartInfo file.Path.value
+                psi.UseShellExecute <- true
+                psi.WorkingDirectory <- containingFolder.value
+                psi
+            | Some launcher ->
+                let path, workingDirectory =
+                    match launcher.Choose with
+                    | Choose.File -> file.Path.value, file.Path.folder.value
+                    | Choose.Directory ->
+                        let dir = file.Path.folder.value
+                        dir, dir
+
+                let psi = ProcessStartInfo launcher.Path.value
+                psi.Arguments <- Launcher.buildArgs launcher path
+                psi.WorkingDirectory <- workingDirectory
+                psi
+
+        let p = Process.Start psi
+        p.WaitForExit(timeout) |> ignore
 
     let chooseLauncher folder file =
         match folder.Launchers with

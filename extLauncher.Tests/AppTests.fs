@@ -68,7 +68,6 @@ let ``refresh should synchronize files`` () =
             Launchers = Array.empty
         }
         |> App.refresh loadFiles save
-        |> Option.get
 
     newFolder.Files[0].Path.value =! "file1"
     newFolder.Files[1].Path.value =! "file3"
@@ -94,7 +93,6 @@ let ``refresh should keep triggers`` () =
             Launchers = Array.empty
         }
         |> App.refresh loadFiles save
-        |> Option.get
 
     newFolder.Files[0].Triggered =! 1
     newFolder.Files[1].Triggered =! 0
@@ -310,7 +308,6 @@ let ``refresh should filter out files in ignored folders`` () =
             Launchers = Array.empty
         }
         |> App.refresh loadFiles save
-        |> Option.get
 
     newFolder.Files.Length =! 2
     newFolder.Files[0].Path.value =! "file1"

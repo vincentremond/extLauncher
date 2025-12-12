@@ -26,7 +26,7 @@ let loadFolder (loadFiles: LoadFiles) conf : Folder option =
 let index (loadFiles: LoadFiles) save (conf: FolderConf) : Folder option =
     loadFolder loadFiles conf |> Option.map save
 
-let refresh (loadFiles: LoadFiles) save (folder: Folder) : Folder option =
+let refresh (loadFiles: LoadFiles) save (folder: Folder) : Folder =
 
     let newFiles =
         loadFiles folder.Path folder.FoldersToIgnore folder.Pattern
@@ -42,7 +42,6 @@ let refresh (loadFiles: LoadFiles) save (folder: Folder) : Folder option =
     )
     |> fun files -> { folder with Files = files }
     |> save
-    |> Some
 
 let makeSearcher folder str =
     Helpers.searchByName folder.Files (fun f -> f.Name.value) str |> Array.sort

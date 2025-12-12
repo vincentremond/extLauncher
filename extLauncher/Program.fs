@@ -319,16 +319,27 @@ type InfoCommand() =
 
             0
 
-type RefreshCommand() =
-    inherit Command()
+type RefreshSettings() =
+    inherit CommandSettings()
 
-    override _.Execute(_context, _cancellationToken) =
+    [<CommandOption "-n|--no-prompt-after-refresh">]
+    [<Description "If set the program simply terminates after the refreshing is done. Otherwise a prompt asking what to laucnh is displayed">]
+    member val NoPromptAfterRefresh = false with get, set
+
+type RefreshCommand() =
+    inherit Command<RefreshSettings>()
+
+    override _.Execute(_context, settings, _cancellationToken) =
         match findFolder () with
         | None -> notInitialized ()
         | Some folder ->
             fun _ -> folder |> App.refresh IO.getFiles Db.upsertFolder
             |> withLoader
-            |> Option.iter prompt
+            |> (
+                match settings.NoPromptAfterRefresh with
+                | true -> ignore
+                | false -> prompt
+            )
 
             0
 
@@ -341,18 +352,12 @@ module Program =
         app.Configure(fun conf ->
             conf.SetApplicationName(IO.AppName) |> ignore
 
-            conf
-                .AddCommand<PromptCommand>("prompt")
-                .WithDescription(
-                    "[italic](default command)[/] Type to search. Arrows Up/Down to navigate. Enter to launch. Escape to quit."
-                )
+            conf.AddCommand<PromptCommand>("prompt").WithDescription("[italic](default command)[/] Type to search. Arrows Up/Down to navigate. Enter to launch. Escape to quit.")
             |> ignore
 
             conf
                 .AddCommand<IndexCommand>("index")
-                .WithDescription(
-                    "Indexes all files recursively with a specific pattern which can be a wildcard [italic](default)[/] or a regular expression."
-                )
+                .WithDescription("Indexes all files recursively with a specific pattern which can be a wildcard [italic](default)[/] or a regular expression.")
             |> ignore
 
             conf.AddBranch<LauncherSettings>(
@@ -371,9 +376,7 @@ module Program =
             conf.AddCommand<DeindexCommand>("deindex").WithDescription("Clears the current index.")
             |> ignore
 
-            conf
-                .AddCommand<InfoCommand>("info")
-                .WithDescription("Prints the current pattern and all the indexed files.")
+            conf.AddCommand<InfoCommand>("info").WithDescription("Prints the current pattern and all the indexed files.")
             |> ignore
 
             conf.AddCommand<RefreshCommand>("refresh").WithDescription("Updates the current index.")

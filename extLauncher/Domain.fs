@@ -72,29 +72,29 @@ module File =
 
     let triggered file = { file with Triggered = file.Triggered + 1 }
 
-type Choose =
+type LaunchTarget =
     | File
     | Directory
 
-module Choose =
+module LaunchTarget =
     let fromIntCode =
         function
-        | 0 -> Choose.File
-        | 1 -> Choose.Directory
+        | 0 -> LaunchTarget.File
+        | 1 -> LaunchTarget.Directory
         | _ -> failwith "Invalid value"
 
     let toIntCode =
         function
-        | Choose.File -> 0
-        | Choose.Directory -> 1
+        | LaunchTarget.File -> 0
+        | LaunchTarget.Directory -> 1
 
 type Launcher = {
     Name: string
     Path: FilePath
     Arguments: string option
-    Choose: Choose
+    Choose: LaunchTarget
     SortIndex: int
-} with
+}with
 
     static member name this = this.Name
 

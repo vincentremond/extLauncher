@@ -78,7 +78,7 @@ module Db =
             Name = launcher.Name
             Path = launcher.Path.value
             Arguments = launcher.Arguments |> Option.toObj
-            Choose = Choose.toIntCode launcher.Choose
+            Choose = LaunchTarget.toIntCode launcher.Choose
             SortIndex = launcher.SortIndex
         }
 
@@ -86,7 +86,7 @@ module Db =
             Name = launcherDb.Name
             Path = FilePath launcherDb.Path
             Arguments = launcherDb.Arguments |> Option.ofObj
-            Choose = Choose.fromIntCode launcherDb.Choose
+            Choose = LaunchTarget.fromIntCode launcherDb.Choose
             SortIndex = launcherDb.SortIndex
         }
 

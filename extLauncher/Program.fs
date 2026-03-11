@@ -35,8 +35,8 @@ module private Implementations =
             | Some launcher ->
                 let path, workingDirectory =
                     match launcher.Choose with
-                    | Choose.File -> file.Path.value, file.Path.folder.value
-                    | Choose.Directory ->
+                    | LaunchTarget.File -> file.Path.value, file.Path.folder.value
+                    | LaunchTarget.Directory ->
                         let dir = file.Path.folder.value
                         dir, dir
 
@@ -102,7 +102,7 @@ module private Implementations =
                     [|
                         "#"
                         "Name"
-                        "Choose"
+                        "Target"
                         "Path"
                         "Arguments"
                     |]
@@ -191,7 +191,7 @@ type SetLauncherSettings() =
 
     [<CommandOption "-c|--choose">]
     [<Description "Which should be launched, the 'file' [italic](default)[/] or the 'directory'?">]
-    member val Choose = Choose.File with get, set
+    member val Choose = LaunchTarget.File with get, set
 
     [<CommandOption "-s|--sort-index">]
     [<Description "Sort order of the launcher in the selection list. Auto-assigned if not provided.">]

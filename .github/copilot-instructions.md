@@ -79,6 +79,13 @@ DB types (`FolderDb`, `FileDb`, etc.) in `Infra.fs` require `[<CLIMutable>]` for
 - `fsharp_max_record_number_of_items = 1` (one field per line)
 - `fsharp_max_array_or_list_number_of_items = 1` (one item per line)
 
+## Keeping These Instructions Up to Date
+
+After any functionality change (new command, new type field, new convention, etc.), update this file to reflect it. In particular:
+- New CLI commands → document them or update the architecture section
+- New domain fields → update relevant convention examples
+- New dependencies → add them to the Dependencies section
+
 ## Dependencies
 
 - **Spectre.Console / Spectre.Console.Cli** — rich terminal output and CLI command parsing

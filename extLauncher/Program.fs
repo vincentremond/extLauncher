@@ -240,6 +240,72 @@ type SetLauncherCommand() =
 
     interface ICommandLimiter<LauncherSettings>
 
+type EditLauncherCommand() =
+    inherit Command<LauncherSettings>()
+
+    override _.Execute(_, settings, _cancellationToken) =
+        match findFolder () with
+        | None -> notInitialized ()
+        | Some folder ->
+            match folder.Launchers |> Array.tryFindIndex (fun l -> l.Name = settings.Name) with
+            | None ->
+                markup $"[green]{settings.Name}[/] launcher not found."
+                printLaunchers folder
+                0
+            | Some index ->
+                let existing = folder.Launchers[index]
+
+                let name =
+                    AnsiConsole.Prompt(TextPrompt<string>("Launcher [teal]name[/]:").DefaultValue(existing.Name))
+
+                let path =
+                    AnsiConsole.Prompt(TextPrompt<string>("Launcher [teal]path[/]:").DefaultValue(existing.Path.value))
+
+                let arguments =
+                    let raw =
+                        AnsiConsole.Prompt(
+                            TextPrompt<string>("Command line [teal]arguments[/] (empty to clear):")
+                                .DefaultValue(existing.Arguments |> Option.defaultValue "%s")
+                                .AllowEmpty()
+                        )
+
+                    if String.IsNullOrWhiteSpace(raw) then None else Some raw
+
+                let launchTargetChoices =
+                    LaunchTarget.all
+                    |> List.sortBy (fun lt -> if lt = existing.Choose then 0, lt else 1, lt)
+
+                let launchTarget =
+                    AnsiConsole.Prompt(
+                        SelectionPrompt<LaunchTarget>()
+                            .Title($"Which [teal]launch target[/] [green]({existing.Choose})[/]")
+                            .UseConverter(string)
+                            .AddChoices(launchTargetChoices)
+                    )
+
+                AnsiConsole.MarkupLineInterpolated(
+                    $"Which [teal]launch target[/] [green]({existing.Choose})[/]: {launchTarget}"
+                )
+
+                let sortIndex =
+                    AnsiConsole.Prompt(TextPrompt<int>("Sort [teal]index[/]:").DefaultValue(existing.SortIndex))
+
+                let updated = {
+                    existing with
+                        Name = name
+                        Path = FilePath path
+                        Arguments = arguments
+                        Choose = launchTarget
+                        SortIndex = sortIndex
+                }
+
+                folder.Launchers[index] <- updated
+                folder |> Db.upsertFolder |> printLaunchers
+
+                0
+
+    interface ICommandLimiter<LauncherSettings>
+
 type RemoveLauncherCommand() =
     inherit Command<RemoveLauncherSettings>()
 
@@ -387,6 +453,11 @@ module Program =
                     launcher.SetDescription("Add, update or remove a launcher [italic](optional)[/].")
 
                     launcher.AddCommand<SetLauncherCommand>("set").WithDescription("Add or update a launcher.")
+                    |> ignore
+
+                    launcher
+                        .AddCommand<EditLauncherCommand>("edit")
+                        .WithDescription("Interactively edit an existing launcher.")
                     |> ignore
 
                     launcher.AddCommand<RemoveLauncherCommand>("remove").WithDescription("Remove a launcher.")

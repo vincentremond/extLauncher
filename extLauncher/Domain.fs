@@ -76,6 +76,8 @@ type LaunchTarget =
     | File
     | Directory
 
+    static member all = [ File; Directory ]
+
 module LaunchTarget =
     let fromIntCode =
         function

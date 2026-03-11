@@ -71,6 +71,7 @@ module Db =
         Path: string
         Arguments: string | null
         Choose: int
+        SortIndex: int
     } with
 
         static member fromDomain(launcher: Launcher) = {
@@ -78,6 +79,7 @@ module Db =
             Path = launcher.Path.value
             Arguments = launcher.Arguments |> Option.toObj
             Choose = Choose.toIntCode launcher.Choose
+            SortIndex = launcher.SortIndex
         }
 
         static member toDomain(launcherDb: LauncherDb) : Launcher = {
@@ -85,6 +87,7 @@ module Db =
             Path = FilePath launcherDb.Path
             Arguments = launcherDb.Arguments |> Option.ofObj
             Choose = Choose.fromIntCode launcherDb.Choose
+            SortIndex = launcherDb.SortIndex
         }
 
     type FileDb = {

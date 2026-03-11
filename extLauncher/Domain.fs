@@ -93,6 +93,7 @@ type Launcher = {
     Path: FilePath
     Arguments: string option
     Choose: Choose
+    SortIndex: int
 } with
 
     static member name this = this.Name

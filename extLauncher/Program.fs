@@ -53,7 +53,7 @@ module private Implementations =
         | [||] -> run file None
         | [| launcher |] -> run file (Some launcher)
         | launchers ->
-            Helpers.searchByName launchers _.Name
+            Helpers.searchByName (launchers |> Array.sortBy _.SortIndex) _.Name
             |> Console.prompt Console.Terminal "With which launcher?" Launcher.name 10
             |> function
                 | Some launcher -> run file (Some launcher)
@@ -100,6 +100,7 @@ module private Implementations =
             Table()
                 .AddColumns(
                     [|
+                        "#"
                         "Name"
                         "Choose"
                         "Path"
@@ -109,9 +110,10 @@ module private Implementations =
 
         launchers.Border <- TableBorder.Minimal
 
-        for l in folder.Launchers do
+        for l in folder.Launchers |> Array.sortBy _.SortIndex do
             launchers.AddRow(
                 [|
+                    string l.SortIndex
                     l.Name.EscapeMarkup()
                     string l.Choose
                     l.Path.value.EscapeMarkup()
@@ -191,6 +193,10 @@ type SetLauncherSettings() =
     [<Description "Which should be launched, the 'file' [italic](default)[/] or the 'directory'?">]
     member val Choose = Choose.File with get, set
 
+    [<CommandOption "-s|--sort-index">]
+    [<Description "Sort order of the launcher in the selection list. Auto-assigned if not provided.">]
+    member val SortIndex = System.Nullable<int>() with get, set
+
 type RemoveLauncherSettings() =
     inherit LauncherSettings()
 
@@ -203,6 +209,14 @@ type SetLauncherCommand() =
         | Some folder ->
             markup $"[teal]{settings.Name}[/] launcher updated."
 
+            let existing = folder.Launchers |> Array.tryFind (fun l -> l.Name = settings.Name)
+
+            let sortIndex =
+                match settings.SortIndex.HasValue, existing with
+                | true, _ -> settings.SortIndex.Value
+                | false, Some l -> l.SortIndex
+                | false, None -> folder.Launchers.Length
+
             {
                 Name = settings.Name
                 Path = FilePath settings.Path
@@ -211,6 +225,7 @@ type SetLauncherCommand() =
                     | x when String.IsNullOrWhiteSpace(x) -> None
                     | args -> Some args
                 Choose = settings.Choose
+                SortIndex = sortIndex
             }
             |> fun launcher ->
                 match folder.Launchers |> Array.tryFindIndex (fun l -> l.Name = launcher.Name) with

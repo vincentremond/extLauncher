@@ -306,6 +306,70 @@ type EditLauncherCommand() =
 
     interface ICommandLimiter<LauncherSettings>
 
+type AddLauncherCommand() =
+    inherit Command<LauncherSettings>()
+
+    override _.Execute(_, settings, _cancellationToken) =
+        match findFolder () with
+        | None -> notInitialized ()
+        | Some folder ->
+            let name =
+                AnsiConsole.Prompt(
+                    TextPrompt<string>("Launcher [teal]name[/]:")
+                        .DefaultValue(settings.Name)
+                )
+
+            if folder.Launchers |> Array.exists (fun l -> l.Name = name) then
+                markup $"A launcher named [green]{name}[/] already exists. Use [yellow]edit[/] to update it."
+                1
+            else
+
+            let path =
+                AnsiConsole.Prompt(TextPrompt<string>("Launcher [teal]path[/]:"))
+
+            let arguments =
+                let raw =
+                    AnsiConsole.Prompt(
+                        TextPrompt<string>("Command line [teal]arguments[/] (empty to skip):")
+                            .DefaultValue("%s")
+                            .AllowEmpty()
+                    )
+
+                if String.IsNullOrWhiteSpace(raw) then None else Some raw
+
+            let launchTarget =
+                AnsiConsole.Prompt(
+                    SelectionPrompt<LaunchTarget>()
+                        .Title("Which [teal]launch target[/]?")
+                        .UseConverter(string)
+                        .AddChoices(LaunchTarget.all)
+                )
+
+            let sortIndex =
+                AnsiConsole.Prompt(
+                    TextPrompt<int>("Sort [teal]index[/]:")
+                        .DefaultValue(
+                            if Array.isEmpty folder.Launchers then 0
+                            else (folder.Launchers |> Array.map _.SortIndex |> Array.max) + 1
+                        )
+                )
+
+            let launcher = {
+                Name = name
+                Path = FilePath path
+                Arguments = arguments
+                Choose = launchTarget
+                SortIndex = sortIndex
+            }
+
+            { folder with Launchers = Array.append folder.Launchers [| launcher |] }
+            |> Db.upsertFolder
+            |> printLaunchers
+
+            0
+
+    interface ICommandLimiter<LauncherSettings>
+
 type RemoveLauncherCommand() =
     inherit Command<RemoveLauncherSettings>()
 
@@ -451,6 +515,9 @@ module Program =
                 "launcher",
                 fun launcher ->
                     launcher.SetDescription("Add, update or remove a launcher [italic](optional)[/].")
+
+                    launcher.AddCommand<AddLauncherCommand>("add").WithDescription("Interactively add a new launcher.")
+                    |> ignore
 
                     launcher.AddCommand<SetLauncherCommand>("set").WithDescription("Add or update a launcher.")
                     |> ignore

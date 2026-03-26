@@ -264,12 +264,13 @@ type EditLauncherCommand() =
                 let arguments =
                     let raw =
                         AnsiConsole.Prompt(
-                            TextPrompt<string>("Command line [teal]arguments[/] (empty to clear):")
-                                .DefaultValue(existing.Arguments |> Option.defaultValue "%s")
-                                .AllowEmpty()
+                            TextPrompt<string>("Command line [teal]arguments[/] (dash to clear):").DefaultValue(existing.Arguments |> Option.defaultValue "%s").AllowEmpty()
                         )
 
-                    if String.IsNullOrWhiteSpace(raw) then None else Some raw
+                    match raw with
+                    | x when String.IsNullOrWhiteSpace(x) -> None
+                    | "-" -> None
+                    | args -> Some args
 
                 let launchTargetChoices =
                     LaunchTarget.all
@@ -277,15 +278,10 @@ type EditLauncherCommand() =
 
                 let launchTarget =
                     AnsiConsole.Prompt(
-                        SelectionPrompt<LaunchTarget>()
-                            .Title($"Which [teal]launch target[/] [green]({existing.Choose})[/]")
-                            .UseConverter(string)
-                            .AddChoices(launchTargetChoices)
+                        SelectionPrompt<LaunchTarget>().Title($"Which [teal]launch target[/] [green]({existing.Choose})[/]").UseConverter(string).AddChoices(launchTargetChoices)
                     )
 
-                AnsiConsole.MarkupLineInterpolated(
-                    $"Which [teal]launch target[/] [green]({existing.Choose})[/]: {launchTarget}"
-                )
+                AnsiConsole.MarkupLineInterpolated($"Which [teal]launch target[/] [green]({existing.Choose})[/]: {launchTarget}")
 
                 let sortIndex =
                     AnsiConsole.Prompt(TextPrompt<int>("Sort [teal]index[/]:").DefaultValue(existing.SortIndex))
@@ -314,59 +310,51 @@ type AddLauncherCommand() =
         | None -> notInitialized ()
         | Some folder ->
             let name =
-                AnsiConsole.Prompt(
-                    TextPrompt<string>("Launcher [teal]name[/]:")
-                        .DefaultValue(settings.Name)
-                )
+                AnsiConsole.Prompt(TextPrompt<string>("Launcher [teal]name[/]:").DefaultValue(settings.Name))
 
             if folder.Launchers |> Array.exists (fun l -> l.Name = name) then
                 markup $"A launcher named [green]{name}[/] already exists. Use [yellow]edit[/] to update it."
                 1
             else
 
-            let path =
-                AnsiConsole.Prompt(TextPrompt<string>("Launcher [teal]path[/]:"))
+                let path = AnsiConsole.Prompt(TextPrompt<string>("Launcher [teal]path[/]:"))
 
-            let arguments =
-                let raw =
+                let arguments =
+                    let raw =
+                        AnsiConsole.Prompt(TextPrompt<string>("Command line [teal]arguments[/] (dash for empty):").DefaultValue("%s").AllowEmpty())
+
+                    match raw with
+                    | x when String.IsNullOrWhiteSpace(x) -> None
+                    | "-" -> None
+                    | args -> Some args
+
+                let launchTarget =
+                    AnsiConsole.Prompt(SelectionPrompt<LaunchTarget>().Title("Which [teal]launch target[/]?").UseConverter(string).AddChoices(LaunchTarget.all))
+
+                let sortIndex =
                     AnsiConsole.Prompt(
-                        TextPrompt<string>("Command line [teal]arguments[/] (empty to skip):")
-                            .DefaultValue("%s")
-                            .AllowEmpty()
+                        TextPrompt<int>("Sort [teal]index[/]:")
+                            .DefaultValue(
+                                if Array.isEmpty folder.Launchers then
+                                    0
+                                else
+                                    (folder.Launchers |> Array.map _.SortIndex |> Array.max) + 1
+                            )
                     )
 
-                if String.IsNullOrWhiteSpace(raw) then None else Some raw
+                let launcher = {
+                    Name = name
+                    Path = FilePath path
+                    Arguments = arguments
+                    Choose = launchTarget
+                    SortIndex = sortIndex
+                }
 
-            let launchTarget =
-                AnsiConsole.Prompt(
-                    SelectionPrompt<LaunchTarget>()
-                        .Title("Which [teal]launch target[/]?")
-                        .UseConverter(string)
-                        .AddChoices(LaunchTarget.all)
-                )
+                { folder with Launchers = Array.append folder.Launchers [| launcher |] }
+                |> Db.upsertFolder
+                |> printLaunchers
 
-            let sortIndex =
-                AnsiConsole.Prompt(
-                    TextPrompt<int>("Sort [teal]index[/]:")
-                        .DefaultValue(
-                            if Array.isEmpty folder.Launchers then 0
-                            else (folder.Launchers |> Array.map _.SortIndex |> Array.max) + 1
-                        )
-                )
-
-            let launcher = {
-                Name = name
-                Path = FilePath path
-                Arguments = arguments
-                Choose = launchTarget
-                SortIndex = sortIndex
-            }
-
-            { folder with Launchers = Array.append folder.Launchers [| launcher |] }
-            |> Db.upsertFolder
-            |> printLaunchers
-
-            0
+                0
 
     interface ICommandLimiter<LauncherSettings>
 
@@ -492,23 +480,20 @@ module Program =
 
     [<EntryPoint>]
     let main args =
+
+        Console.Title <- IO.AppName
+
         let app = CommandApp<PromptCommand>()
 
         app.Configure(fun conf ->
             conf.SetApplicationName(IO.AppName) |> ignore
 
-            conf
-                .AddCommand<PromptCommand>("prompt")
-                .WithDescription(
-                    "[italic](default command)[/] Type to search. Arrows Up/Down to navigate. Enter to launch. Escape to quit."
-                )
+            conf.AddCommand<PromptCommand>("prompt").WithDescription("[italic](default command)[/] Type to search. Arrows Up/Down to navigate. Enter to launch. Escape to quit.")
             |> ignore
 
             conf
                 .AddCommand<IndexCommand>("index")
-                .WithDescription(
-                    "Indexes all files recursively with a specific pattern which can be a wildcard [italic](default)[/] or a regular expression."
-                )
+                .WithDescription("Indexes all files recursively with a specific pattern which can be a wildcard [italic](default)[/] or a regular expression.")
             |> ignore
 
             conf.AddBranch<LauncherSettings>(
@@ -522,9 +507,7 @@ module Program =
                     launcher.AddCommand<SetLauncherCommand>("set").WithDescription("Add or update a launcher.")
                     |> ignore
 
-                    launcher
-                        .AddCommand<EditLauncherCommand>("edit")
-                        .WithDescription("Interactively edit an existing launcher.")
+                    launcher.AddCommand<EditLauncherCommand>("edit").WithDescription("Interactively edit an existing launcher.")
                     |> ignore
 
                     launcher.AddCommand<RemoveLauncherCommand>("remove").WithDescription("Remove a launcher.")
@@ -535,9 +518,7 @@ module Program =
             conf.AddCommand<DeindexCommand>("deindex").WithDescription("Clears the current index.")
             |> ignore
 
-            conf
-                .AddCommand<InfoCommand>("info")
-                .WithDescription("Prints the current pattern and all the indexed files.")
+            conf.AddCommand<InfoCommand>("info").WithDescription("Prints the current pattern and all the indexed files.")
             |> ignore
 
             conf.AddCommand<RefreshCommand>("refresh").WithDescription("Updates the current index.")

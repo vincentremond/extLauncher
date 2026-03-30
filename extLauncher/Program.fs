@@ -18,7 +18,7 @@ module private Implementations =
         1
 
     let run (file: File) launcher =
-        markup $"""Launching [green]{file.Name.value}[/] [gray]{file.Path.value}[/]..."""
+        markup $"""Launching [green]{file.Name.value.EscapeMarkup()}[/] [gray]{file.Path.value.EscapeMarkup()}[/]..."""
         let file = file |> File.triggered |> Db.updateFile
 
         let timeout = TimeSpan.FromSeconds(2.0)
@@ -60,7 +60,7 @@ module private Implementations =
                 | None -> ()
 
     let filePrompt (file: File) : string =
-        $"""[white]%s{file.Name.value}[/]  [gray](%s{file.Path.folder.value})[/]"""
+        $"""[white]%s{file.Name.value.EscapeMarkup()}[/]  [gray](%s{file.Path.folder.value.EscapeMarkup()})[/]"""
 
     let prompt folder =
         folder
@@ -400,7 +400,7 @@ type InfoCommand() =
         | None -> notInitialized ()
         | Some folder ->
             markup $"[teal]Path:[/]"
-            markup $"  {folder.Path.value}"
+            markup $"  {folder.Path.value.EscapeMarkup()}"
             markup $""
             markup $"[teal]Pattern:[/]"
             markup $"  {folder.Pattern.value}"
@@ -441,9 +441,9 @@ type InfoCommand() =
 
                 files.AddRow(
                     [|
-                        f.Name.value
+                        f.Name.value.EscapeMarkup()
                         string f.Triggered
-                        path
+                        path.EscapeMarkup()
                     |]
                 )
                 |> ignore
